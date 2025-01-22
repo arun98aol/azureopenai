@@ -1,0 +1,135 @@
+Here's a revised code base using LangChain's create_pandas_dataframe_agent that incorporates your request for a custom zero-shot prompt and instructions to handle complex data file scenarios:
+
+
+---
+
+Code Base
+
+1. Install Required Packages
+
+Ensure the required packages are installed:
+
+pip install langchain openai pandas
+
+
+2. Set Up Azure OpenAI Integration
+
+Configure the environment for Azure OpenAI:
+
+import os
+from langchain.llms import AzureOpenAI
+
+os.environ["OPENAI_API_TYPE"] = "azure"
+os.environ["OPENAI_API_VERSION"] = "2023-05-15"
+os.environ["OPENAI_API_BASE"] = "https://<your-openai-resource-name>.openai.azure.com/"
+os.environ["OPENAI_API_KEY"] = "<your-azure-openai-key>"
+
+llm = AzureOpenAI(deployment_name="<your-deployment-name>")
+
+
+3. Define the Custom Prompt Template
+
+Create a custom prompt that emphasizes the complexity of the data file:
+
+from langchain.prompts import PromptTemplate
+
+custom_prompt = PromptTemplate(
+    input_variables=["input", "agent_scratchpad"],
+    template="""
+    You are an intelligent data analysis assistant specialized in understanding and analyzing complex data files.
+    The files may contain multiple DataFrames with varying levels of structure and headers located in non-standard rows.
+    Your task is to interpret the query, understand the structure of all the DataFrames, and extract accurate information.
+
+    Instructions:
+    - The data may contain multiple tables in one file, spread across different sheets or rows.
+    - Headers may not always be in the first row and may differ across DataFrames.
+    - Understand the structure of the data before processing the query.
+    - Provide detailed and accurate responses.
+
+    User Query: {input}
+    {agent_scratchpad}
+    """
+)
+
+
+4. Load the CSV File into a Pandas DataFrame
+
+Use Pandas to handle complex data loading:
+
+import pandas as pd
+
+def load_data(file_path):
+    try:
+        # Load the CSV file without assuming headers
+        df = pd.read_csv(file_path, header=None)
+        return df
+    except Exception as e:
+        raise ValueError(f"Error loading file: {str(e)}")
+
+
+5. Set Up the Pandas DataFrame Agent
+
+Initialize the DataFrame agent with your custom prompt:
+
+from langchain.agents import create_pandas_dataframe_agent
+
+def initialize_agent(dataframe, llm, custom_prompt):
+    # Create the agent
+    agent = create_pandas_dataframe_agent(
+        llm=llm,
+        df=dataframe,
+        agent_type="zero-shot-react-description",  # Use zero-shot agent type
+        prompt=custom_prompt,
+        verbose=True
+    )
+    return agent
+
+
+6. Integrate the Workflow
+
+Combine everything into a workflow:
+
+def main(file_path, query):
+    # Load the data
+    data = load_data(file_path)
+
+    # Initialize the agent
+    agent = initialize_agent(data, llm, custom_prompt)
+
+    # Run the query
+    response = agent.run(query)
+    return response
+
+
+7. Run the Agent
+
+Use the agent with your query:
+
+if __name__ == "__main__":
+    file_path = "complex_data.csv"  # Replace with your CSV file path
+    query = "What is the total sales for Q3 in 2023?"
+    try:
+        result = main(file_path, query)
+        print(result)
+    except Exception as e:
+        print(f"Error: {str(e)}")
+
+
+
+
+---
+
+Features
+
+1. Custom Prompt: The agent is tailored to understand and handle the complexity of the data file.
+
+
+2. Zero-Shot Agent: Allows the agent to infer instructions dynamically without requiring examples.
+
+
+3. Pandas DataFrame Integration: Ensures flexibility for preprocessing and complex data manipulations.
+
+
+
+This setup is robust for handling irregular CSV files and complex data structures while enabling customization through the prompt. Let me know if further refinements are needed!
+
